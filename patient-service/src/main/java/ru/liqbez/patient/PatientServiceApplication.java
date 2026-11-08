@@ -1,13 +1,11 @@
-package ru.liqbez;
+package ru.liqbez.patient;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class LiqbezDemoApplication {
-
+public class PatientServiceApplication {
     public static void main(String[] args) {
-        SpringApplication.run(LiqbezDemoApplication.class, args);
+        SpringApplication.run(PatientServiceApplication.class, args);
     }
-
 }
