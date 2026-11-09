@@ -3,7 +3,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
 
-subprojects {
+configure(subprojects.filter { it.path != ":services" }) {
     apply(plugin = "java")
     apply(plugin = "org.springframework.boot")
     apply(plugin = "io.spring.dependency-management")

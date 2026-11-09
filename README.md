@@ -8,8 +8,8 @@
 |---|---:|---|
 | `discovery-server` | 8761 | Eureka: реестр экземпляров |
 | `api-gateway` | 8080 | Внешний вход, маршрутизация по именам сервисов |
-| `patient-service` | 8081 | Демо-данные пациента |
-| `appointment-service` | 8082 | Запись на приём, запрос к `patient-service` по имени |
+| `services/patient-service` | 8081 | Демо-данные пациента |
+| `services/appointment-service` | 8082 | Запись на приём, запрос к `patient-service` по имени |
 
 Gateway использует маршруты `lb://patient-service` и `lb://appointment-service`. `appointment-service` обращается к `http://patient-service` через Spring Cloud LoadBalancer. Порты сервисов нужны лишь для локального запуска; адреса маршрутов не зависят от них.
 
@@ -19,8 +19,8 @@ Gateway использует маршруты `lb://patient-service` и `lb://ap
 
 ```bash
 ./gradlew :discovery-server:bootRun
-./gradlew :patient-service:bootRun
-./gradlew :appointment-service:bootRun
+./gradlew :services:patient-service:bootRun
+./gradlew :services:appointment-service:bootRun
 ./gradlew :api-gateway:bootRun
 ```
 
