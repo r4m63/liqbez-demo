@@ -1,34 +1,43 @@
 # Liqbez Demo: pet clinic
 
-Минимальный стенд для изучения микросервисов, API Gateway и Service Discovery. Все примеры развиваются в `main`.
+Стенд для примеров микросервисов, API Gateway и Service Discovery. Все демо развиваются в `main`.
 
-## Состав
+| Компонент | Адрес с хоста | Назначение |
+|---|---|---|
+| Consul | `http://localhost:8500/ui` | Активный реестр сервисов |
+| `services/api-gateway` | `http://localhost:18080` | Внешний вход |
+| `services/patient-service` | Через gateway | Демо-данные пациента |
+| `services/appointment-service` | Через gateway | Запись на приём; вызывает `patient-service` по имени |
+| `services/eureka-service` | Не запускается в Compose | Сохранённый альтернативный реестр Eureka |
 
-| Приложение | Порт | Роль |
-|---|---:|---|
-| `services/discovery-server` | 8761 | Eureka: реестр экземпляров |
-| `services/api-gateway` | 8080 | Внешний вход, маршрутизация по именам сервисов |
-| `services/patient-service` | 8081 | Демо-данные пациента |
-| `services/appointment-service` | 8082 | Запись на приём, запрос к `patient-service` по имени |
+Gateway использует `lb://patient-service` и `lb://appointment-service`. Сервисы регистрируются в Consul через Spring Cloud Consul. Consul проверяет их `/actuator/health`.
 
-Gateway использует маршруты `lb://patient-service` и `lb://appointment-service`. `appointment-service` обращается к `http://patient-service` через Spring Cloud LoadBalancer. Порты сервисов нужны лишь для локального запуска; адреса маршрутов не зависят от них.
+## Запуск в Docker Compose
 
-## Запуск
-
-Требуется JDK 25. В четырёх терминалах из корня проекта запустить по порядку:
-
-```bash
-./gradlew :services:discovery-server:bootRun
-./gradlew :services:patient-service:bootRun
-./gradlew :services:appointment-service:bootRun
-./gradlew :services:api-gateway:bootRun
-```
-
-После регистрации сервисов в Eureka открыть `http://localhost:8761` и проверить:
+Нужны Docker Compose и JDK 25 для сборки JAR. Из корня проекта:
 
 ```bash
-curl http://localhost:8080/patients/1
-curl http://localhost:8080/appointments/1
+./gradlew :services:patient-service:bootJar :services:appointment-service:bootJar :services:api-gateway:bootJar
+docker compose up --build -d
 ```
 
-Ожидаются пациент Барсик и запись с вложенным пациентом. Данные пока находятся в памяти и заданы для `id=1`, чтобы видеть сетевой маршрут без БД. Следующие примеры добавляются как отдельные сценарии или модули в этот же репозиторий.
+Открой [Consul UI](http://localhost:8500/ui) и дождись трёх здоровых сервисов. Проверь запросы:
+
+```bash
+curl http://localhost:18080/patients/1
+curl http://localhost:18080/appointments/1
+```
+
+Ожидаются пациент Барсик и запись с вложенным пациентом. Порт `18080` выбран для Compose, чтобы не конфликтовать с локально запущенным gateway на `8080`. Приложения внутри Compose работают на своих обычных портах.
+
+Вторая реплика сервиса пациентов:
+
+```bash
+docker compose up -d --scale patient-service=2
+```
+
+В Consul появятся два экземпляра `patient-service`. Остановить стенд: `docker compose down`.
+
+## Альтернатива: Eureka
+
+Модуль `services/eureka-service` сохранён. Для возврата к нему нужно заменить активную зависимость `spring-cloud-starter-consul-discovery` на закомментированную `spring-cloud-starter-netflix-eureka-client` в трёх приложениях, вернуть закомментированные блоки `eureka` в их `application.yaml` и запустить `./gradlew :services:eureka-service:bootRun`. Consul и Eureka не запускаются одновременно в этом демо.

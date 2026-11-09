@@ -16,8 +16,13 @@ spring:
               uri: lb://appointment-service
               predicates:
                 - Path=/appointments/**
-eureka:
-  client:
-    registry-fetch-interval-seconds: 5
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        instance-id: ${spring.application.name}:${HOSTNAME:${random.value}}
+# eureka:
+#   client:
+#     registry-fetch-interval-seconds: 5
+#     serviceUrl:
+#       defaultZone: http://localhost:8761/eureka/
