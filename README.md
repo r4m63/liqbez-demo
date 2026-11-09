@@ -6,8 +6,8 @@
 
 | Приложение | Порт | Роль |
 |---|---:|---|
-| `discovery-server` | 8761 | Eureka: реестр экземпляров |
-| `api-gateway` | 8080 | Внешний вход, маршрутизация по именам сервисов |
+| `services/discovery-server` | 8761 | Eureka: реестр экземпляров |
+| `services/api-gateway` | 8080 | Внешний вход, маршрутизация по именам сервисов |
 | `services/patient-service` | 8081 | Демо-данные пациента |
 | `services/appointment-service` | 8082 | Запись на приём, запрос к `patient-service` по имени |
 
@@ -18,10 +18,10 @@ Gateway использует маршруты `lb://patient-service` и `lb://ap
 Требуется JDK 25. В четырёх терминалах из корня проекта запустить по порядку:
 
 ```bash
-./gradlew :discovery-server:bootRun
+./gradlew :services:discovery-server:bootRun
 ./gradlew :services:patient-service:bootRun
 ./gradlew :services:appointment-service:bootRun
-./gradlew :api-gateway:bootRun
+./gradlew :services:api-gateway:bootRun
 ```
 
 После регистрации сервисов в Eureka открыть `http://localhost:8761` и проверить:
