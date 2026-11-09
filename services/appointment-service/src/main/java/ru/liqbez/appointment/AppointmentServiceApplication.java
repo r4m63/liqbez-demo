@@ -21,7 +21,7 @@ public class AppointmentServiceApplication {
 
     @Bean
     @LoadBalanced
-    RestClient.Builder patientRestClientBuilder() {
+    RestClient.Builder serviceRestClientBuilder() {
         return RestClient.builder();
     }
 }

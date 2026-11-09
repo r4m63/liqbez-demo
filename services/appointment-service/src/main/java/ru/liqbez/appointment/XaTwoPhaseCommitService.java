@@ -1,4 +1,4 @@
-package ru.liqbez.transactions;
+package ru.liqbez.appointment;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,17 +10,16 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 import org.postgresql.xa.PGXADataSource;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Service;
 
-@RestController
-@RequestMapping("/transactions/xa")
-public class XaController {
+@Service
+public class XaTwoPhaseCommitService {
     private final String patientUrl;
     private final String billingUrl;
     private final String user;
     private final String password;
 
-    public XaController(@Value("${demo.xa.patient-url}") String patientUrl,
+    public XaTwoPhaseCommitService(@Value("${demo.xa.patient-url}") String patientUrl,
                         @Value("${demo.xa.billing-url}") String billingUrl,
                         @Value("${demo.xa.user}") String user,
                         @Value("${demo.xa.password}") String password) {
@@ -30,8 +29,7 @@ public class XaController {
         this.password = password;
     }
 
-    @PostMapping("/{id}")
-    public XaResult run(@PathVariable UUID id, @RequestParam(defaultValue = "false") boolean failBeforePrepare) throws Exception {
+    public XaResult run(UUID id, boolean failBeforePrepare) throws Exception {
         PGXADataSource patient = source(patientUrl);
         PGXADataSource billing = source(billingUrl);
         XAConnection first = patient.getXAConnection();
@@ -75,8 +73,7 @@ public class XaController {
         }
     }
 
-    @GetMapping("/{id}")
-    public XaResult find(@PathVariable UUID id) throws Exception {
+    public XaResult find(UUID id) throws Exception {
         return new XaResult(id, "OBSERVED", exists(patientUrl, "xa_patient_audit", id),
                 exists(billingUrl, "xa_billing_audit", id));
     }

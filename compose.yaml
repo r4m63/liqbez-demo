@@ -40,11 +40,16 @@ services:
       EUREKA_URL: http://eureka-service:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       DEMO_DATA_DIR: /data
+      XA_PATIENT_URL: jdbc:postgresql://xa-patient-db:5432/patientdb
+      XA_BILLING_URL: jdbc:postgresql://xa-billing-db:5432/billingdb
       # CONSUL_HOST: consul
       # SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
     depends_on:
       - eureka-service
       - patient-service
+      - payment-service
+      - xa-patient-db
+      - xa-billing-db
     volumes:
       - appointment-data:/data
 
@@ -92,23 +97,6 @@ services:
       interval: 5s
       retries: 10
 
-  transaction-demo:
-    build:
-      context: .
-      args:
-        SERVICE: transaction-demo
-    environment:
-      EUREKA_URL: http://eureka-service:8761/eureka/
-      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      XA_PATIENT_URL: jdbc:postgresql://xa-patient-db:5432/patientdb
-      XA_BILLING_URL: jdbc:postgresql://xa-billing-db:5432/billingdb
-    depends_on:
-      - eureka-service
-      - appointment-service
-      - payment-service
-      - xa-patient-db
-      - xa-billing-db
-
   api-gateway:
     build:
       context: .
@@ -125,7 +113,6 @@ services:
       - eureka-service
       - patient-service
       - appointment-service
-      - transaction-demo
 
 volumes:
   appointment-data:

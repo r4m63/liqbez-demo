@@ -7,9 +7,8 @@
 | `services/eureka-service` | `http://localhost:8761` | Активный реестр Eureka |
 | `services/api-gateway` | `http://localhost:18080` | Внешний вход |
 | `services/patient-service` | Через gateway | Демо-данные пациента |
-| `services/appointment-service` | Через gateway | Запись на приём; вызывает `patient-service` по имени |
+| `services/appointment-service` | Через gateway | Запись на приём; вызывает `patient-service` по имени; содержит демо XA и Saga |
 | `services/payment-service` | Через gateway | Локальная запись платежа для Saga |
-| `services/transaction-demo` | Через gateway | Координатор демонстраций XA и Saga |
 | Consul | Не запускается в Compose | Сохранённая альтернативная конфигурация |
 
 Gateway использует `lb://patient-service` и `lb://appointment-service`. Сервисы регистрируются в Eureka через Spring Cloud Netflix. Настройки Consul сохранены в комментариях.
@@ -42,7 +41,7 @@ docker compose up -d --scale patient-service=2
 
 ## Демо 2PC / XA
 
-`transaction-demo` подключается к двум отдельным PostgreSQL через `PGXADataSource`. Для каждого запроса он создаёт два XA branch с общим transaction ID, записывает строки, вызывает `prepare` у обеих БД и затем `commit`. В Compose у PostgreSQL включён `max_prepared_transactions`.
+`XaDemoController` вызывает `XaTwoPhaseCommitService` внутри `appointment-service`. Сервис подключается к двум отдельным PostgreSQL через `PGXADataSource`. Для каждого запроса он создаёт два XA branch с общим transaction ID, записывает строки, вызывает `prepare` у обеих БД и затем `commit`. В Compose у PostgreSQL включён `max_prepared_transactions`.
 
 ```bash
 XA_ID=$(uuidgen)
@@ -62,7 +61,7 @@ curl "http://localhost:18080/transactions/xa/$XA_FAIL_ID"
 
 ## Демо Saga
 
-`transaction-demo` сначала вызывает `appointment-service`, который локально сохраняет бронь, затем `payment-service`, который локально сохраняет платёж. При отказе платежа координатор вызывает отдельную операцию отмены брони. Это компенсация уже завершённого шага, а не общий rollback.
+`SagaDemoController` вызывает `SagaService` внутри `appointment-service`. Тот локально сохраняет бронь через `ReservationService`, затем вызывает `payment-service` по сети. При отказе платежа координатор выполняет отдельную операцию отмены брони. Это компенсация уже завершённого шага, а не общий rollback.
 
 ```bash
 SAGA_ID=$(uuidgen)

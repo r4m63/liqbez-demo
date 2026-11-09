@@ -4,6 +4,5 @@ include(
     "services:api-gateway",
     "services:patient-service",
     "services:appointment-service",
-    "services:payment-service",
-    "services:transaction-demo"
+    "services:payment-service"
 )

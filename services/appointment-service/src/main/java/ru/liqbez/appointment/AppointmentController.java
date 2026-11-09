@@ -14,7 +14,7 @@ import org.springframework.web.client.RestClient;
 public class AppointmentController {
     private final RestClient patients;
 
-    public AppointmentController(@Qualifier("patientRestClientBuilder") RestClient.Builder builder) {
+    public AppointmentController(@Qualifier("serviceRestClientBuilder") RestClient.Builder builder) {
         this.patients = builder.baseUrl("http://patient-service").build();
     }
 
