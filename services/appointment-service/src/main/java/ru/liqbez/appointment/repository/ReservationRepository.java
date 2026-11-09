@@ -1,31 +1,27 @@
-package ru.liqbez.appointment;
+package ru.liqbez.appointment.repository;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Repository;
+import ru.liqbez.appointment.model.Reservation;
 
-@Service
-public class ReservationService {
+@Repository
+public class ReservationRepository {
     private final JdbcTemplate jdbc;
 
-    public ReservationService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
-
-    @Transactional
-    public Reservation reserve(String id) {
-        jdbc.update("MERGE INTO reservation (id, status) KEY (id) VALUES (?, 'RESERVED')", id);
-        return new Reservation(id, "RESERVED");
+    public ReservationRepository(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
-    @Transactional
-    public Reservation cancel(String id) {
+    public void reserve(String id) {
+        jdbc.update("MERGE INTO reservation (id, status) KEY (id) VALUES (?, 'RESERVED')", id);
+    }
+
+    public void cancel(String id) {
         jdbc.update("UPDATE reservation SET status = 'CANCELLED' WHERE id = ? AND status = 'RESERVED'", id);
-        return find(id);
     }
 
     public Reservation find(String id) {
         return jdbc.queryForObject("SELECT id, status FROM reservation WHERE id = ?", (rs, row) ->
                 new Reservation(rs.getString("id"), rs.getString("status")), id);
     }
-
-    public record Reservation(String id, String status) {}
 }

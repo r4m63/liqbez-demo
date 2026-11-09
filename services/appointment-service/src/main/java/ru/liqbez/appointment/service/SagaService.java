@@ -1,26 +1,26 @@
-package ru.liqbez.appointment;
+package ru.liqbez.appointment.service;
 
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
+import ru.liqbez.appointment.client.PaymentClient;
+import ru.liqbez.appointment.model.SagaResult;
 
 @Service
 public class SagaService {
     private final ReservationService reservations;
-    private final RestClient payments;
+    private final PaymentClient payments;
     private final ConcurrentHashMap<String, SagaResult> results = new ConcurrentHashMap<>();
 
-    public SagaService(ReservationService reservations, @Qualifier("serviceRestClientBuilder") RestClient.Builder builder) {
+    public SagaService(ReservationService reservations, PaymentClient payments) {
         this.reservations = reservations;
-        this.payments = builder.clone().baseUrl("http://payment-service").build();
+        this.payments = payments;
     }
 
     public SagaResult run(String id, boolean failPayment) {
         if (results.containsKey(id)) return results.get(id);
         reservations.reserve(id);
         try {
-            payments.post().uri("/payments/{id}?fail={fail}", id, failPayment).retrieve().toBodilessEntity();
+            payments.charge(id, failPayment);
             SagaResult result = new SagaResult(id, "COMPLETED", "Reservation and payment committed locally");
             results.put(id, result);
             return result;
@@ -40,5 +40,4 @@ public class SagaService {
 
     public SagaResult find(String id) { return results.get(id); }
 
-    public record SagaResult(String id, String status, String detail) {}
 }

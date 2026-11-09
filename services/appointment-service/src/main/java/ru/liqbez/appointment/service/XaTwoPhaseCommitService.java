@@ -1,41 +1,27 @@
-package ru.liqbez.appointment;
+package ru.liqbez.appointment.service;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.UUID;
 import javax.sql.XAConnection;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
-import org.postgresql.xa.PGXADataSource;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import ru.liqbez.appointment.model.XaResult;
+import ru.liqbez.appointment.repository.XaAuditRepository;
 
 @Service
 public class XaTwoPhaseCommitService {
-    private final String patientUrl;
-    private final String billingUrl;
-    private final String user;
-    private final String password;
+    private final XaAuditRepository repository;
 
-    public XaTwoPhaseCommitService(@Value("${demo.xa.patient-url}") String patientUrl,
-                        @Value("${demo.xa.billing-url}") String billingUrl,
-                        @Value("${demo.xa.user}") String user,
-                        @Value("${demo.xa.password}") String password) {
-        this.patientUrl = patientUrl;
-        this.billingUrl = billingUrl;
-        this.user = user;
-        this.password = password;
+    public XaTwoPhaseCommitService(XaAuditRepository repository) {
+        this.repository = repository;
     }
 
     public XaResult run(UUID id, boolean failBeforePrepare) throws Exception {
-        PGXADataSource patient = source(patientUrl);
-        PGXADataSource billing = source(billingUrl);
-        XAConnection first = patient.getXAConnection();
+        XAConnection first = repository.openPatient();
         XAConnection second;
         try {
-            second = billing.getXAConnection();
+            second = repository.openBilling();
         } catch (Exception ex) {
             first.close();
             throw ex;
@@ -49,8 +35,8 @@ public class XaTwoPhaseCommitService {
             firstResource.start(firstXid, XAResource.TMNOFLAGS);
             secondResource.start(secondXid, XAResource.TMNOFLAGS);
             try {
-                insert(firstSql, "xa_patient_audit", id);
-                insert(secondSql, "xa_billing_audit", id);
+                repository.insertPatient(firstSql, id);
+                repository.insertBilling(secondSql, id);
                 firstResource.end(firstXid, XAResource.TMSUCCESS);
                 secondResource.end(secondXid, XAResource.TMSUCCESS);
                 if (failBeforePrepare) throw new IllegalStateException("Injected failure before XA prepare");
@@ -74,36 +60,8 @@ public class XaTwoPhaseCommitService {
     }
 
     public XaResult find(UUID id) throws Exception {
-        return new XaResult(id, "OBSERVED", exists(patientUrl, "xa_patient_audit", id),
-                exists(billingUrl, "xa_billing_audit", id));
+        return new XaResult(id, "OBSERVED", repository.patientExists(id), repository.billingExists(id));
     }
-
-    private PGXADataSource source(String url) {
-        PGXADataSource source = new PGXADataSource();
-        source.setUrl(url);
-        source.setUser(user);
-        source.setPassword(password);
-        return source;
-    }
-
-    private void insert(Connection connection, String table, UUID id) throws Exception {
-        try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO " + table + " (id, note) VALUES (?, ?)") ) {
-            statement.setObject(1, id);
-            statement.setString(2, "pet clinic XA demo");
-            statement.executeUpdate();
-        }
-    }
-
-    private boolean exists(String url, String table, UUID id) throws Exception {
-        try (Connection connection = DriverManager.getConnection(url, user, password);
-             PreparedStatement statement = connection.prepareStatement("SELECT 1 FROM " + table + " WHERE id = ?")) {
-            statement.setObject(1, id);
-            try (ResultSet result = statement.executeQuery()) { return result.next(); }
-        }
-    }
-
-    public record XaResult(UUID id, String status, boolean patientDatabase, boolean billingDatabase) {}
 
     private record DemoXid(byte[] global, byte[] branch) implements Xid {
         DemoXid(UUID id, int branch) {

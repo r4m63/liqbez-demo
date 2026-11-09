@@ -13,6 +13,10 @@
 
 Gateway использует `lb://patient-service` и `lb://appointment-service`. Сервисы регистрируются в Eureka через Spring Cloud Netflix. Настройки Consul сохранены в комментариях.
 
+## Слоистая архитектура
+
+Прикладной код каждого сервиса разделён на `controller → service → repository`. Контроллер принимает HTTP-запрос, сервис выполняет сценарий и управляет транзакцией, репозиторий работает с данными. DTO и результаты лежат в `model`. В `appointment-service` вызовы других микросервисов выделены в `client`: `PatientClient` обращается к пациентам, `PaymentClient` — к платежам. `SagaService` и координатор `XaTwoPhaseCommitService` находятся в сервисном слое; SQL и подключения к БД — в репозиториях. `PatientRepository` пока хранит одного пациента в памяти, остальные репозитории работают с H2 или PostgreSQL.
+
 ## Запуск в Docker Compose
 
 Нужны Docker Compose и JDK 25 для сборки JAR. Из корня проекта:
