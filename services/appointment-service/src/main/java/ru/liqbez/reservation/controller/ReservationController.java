@@ -1,8 +1,8 @@
-package ru.liqbez.appointment.controller;
+package ru.liqbez.reservation.controller;
 
 import org.springframework.web.bind.annotation.*;
-import ru.liqbez.appointment.model.Reservation;
-import ru.liqbez.appointment.service.ReservationService;
+import ru.liqbez.reservation.model.Reservation;
+import ru.liqbez.reservation.service.ReservationService;
 
 @RestController
 @RequestMapping("/appointments/reservations")

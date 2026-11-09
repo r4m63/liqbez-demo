@@ -1,8 +1,8 @@
-package ru.liqbez.appointment.controller;
+package ru.liqbez.saga.controller;
 
 import org.springframework.web.bind.annotation.*;
-import ru.liqbez.appointment.model.SagaResult;
-import ru.liqbez.appointment.service.SagaService;
+import ru.liqbez.saga.model.SagaResult;
+import ru.liqbez.saga.service.SagaService;
 
 @RestController
 @RequestMapping("/transactions/saga")

@@ -1,4 +1,4 @@
-package ru.liqbez.appointment.repository;
+package ru.liqbez.xa.repository;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

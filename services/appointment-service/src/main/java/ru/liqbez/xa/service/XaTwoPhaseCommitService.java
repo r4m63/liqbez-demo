@@ -1,4 +1,4 @@
-package ru.liqbez.appointment.service;
+package ru.liqbez.xa.service;
 
 import java.sql.Connection;
 import java.util.UUID;
@@ -6,8 +6,8 @@ import javax.sql.XAConnection;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 import org.springframework.stereotype.Service;
-import ru.liqbez.appointment.model.XaResult;
-import ru.liqbez.appointment.repository.XaAuditRepository;
+import ru.liqbez.xa.model.XaResult;
+import ru.liqbez.xa.repository.XaAuditRepository;
 
 @Service
 public class XaTwoPhaseCommitService {

@@ -1,43 +1,45 @@
-package ru.liqbez.appointment.service;
+package ru.liqbez.saga.service;
 
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
-import ru.liqbez.appointment.client.PaymentClient;
-import ru.liqbez.appointment.model.SagaResult;
+import ru.liqbez.reservation.service.ReservationService;
+import ru.liqbez.saga.client.PaymentClient;
+import ru.liqbez.saga.model.SagaResult;
+import ru.liqbez.saga.repository.SagaRepository;
 
 @Service
 public class SagaService {
     private final ReservationService reservations;
     private final PaymentClient payments;
-    private final ConcurrentHashMap<String, SagaResult> results = new ConcurrentHashMap<>();
+    private final SagaRepository repository;
 
-    public SagaService(ReservationService reservations, PaymentClient payments) {
+    public SagaService(ReservationService reservations, PaymentClient payments, SagaRepository repository) {
         this.reservations = reservations;
         this.payments = payments;
+        this.repository = repository;
     }
 
     public SagaResult run(String id, boolean failPayment) {
-        if (results.containsKey(id)) return results.get(id);
+        SagaResult previous = repository.find(id);
+        if (previous != null) return previous;
         reservations.reserve(id);
         try {
             payments.charge(id, failPayment);
             SagaResult result = new SagaResult(id, "COMPLETED", "Reservation and payment committed locally");
-            results.put(id, result);
+            repository.save(result);
             return result;
         } catch (Exception paymentFailure) {
             try {
                 reservations.cancel(id);
                 SagaResult result = new SagaResult(id, "COMPENSATED", "Payment failed; reservation cancelled");
-                results.put(id, result);
+                repository.save(result);
                 return result;
             } catch (Exception compensationFailure) {
                 SagaResult result = new SagaResult(id, "COMPENSATION_FAILED", compensationFailure.getMessage());
-                results.put(id, result);
+                repository.save(result);
                 return result;
             }
         }
     }
 
-    public SagaResult find(String id) { return results.get(id); }
-
+    public SagaResult find(String id) { return repository.find(id); }
 }

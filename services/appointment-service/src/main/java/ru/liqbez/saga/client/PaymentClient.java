@@ -1,4 +1,4 @@
-package ru.liqbez.appointment.client;
+package ru.liqbez.saga.client;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;

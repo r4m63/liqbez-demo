@@ -1,4 +1,4 @@
-package ru.liqbez.appointment.model;
+package ru.liqbez.xa.model;
 
 import java.util.UUID;
 

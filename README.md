@@ -13,9 +13,22 @@
 
 Gateway использует `lb://patient-service` и `lb://appointment-service`. Сервисы регистрируются в Eureka через Spring Cloud Netflix. Настройки Consul сохранены в комментариях.
 
-## Слоистая архитектура
+## Вертикальные срезы и слои
 
-Прикладной код каждого сервиса разделён на `controller → service → repository`. Контроллер принимает HTTP-запрос, сервис выполняет сценарий и управляет транзакцией, репозиторий работает с данными. DTO и результаты лежат в `model`. В `appointment-service` вызовы других микросервисов выделены в `client`: `PatientClient` обращается к пациентам, `PaymentClient` — к платежам. `SagaService` и координатор `XaTwoPhaseCommitService` находятся в сервисном слое; SQL и подключения к БД — в репозиториях. `PatientRepository` пока хранит одного пациента в памяти, остальные репозитории работают с H2 или PostgreSQL.
+Код сгруппирован сначала по сценарию, затем по слою. В `appointment-service` четыре среза:
+
+```text
+ru.liqbez/
+├── AppointmentServiceApplication.java
+├── appointment/   controller, service, repository, model, client
+├── reservation/   controller, service, repository, model
+├── saga/          controller, service, repository, model, client
+└── xa/            controller, service, repository, model
+```
+
+В `patient-service` есть срез `patient`, в `payment-service` — срез `payment`; внутри каждого те же `controller`, `service`, `repository`, `model`. Класс запуска Spring Boot лежит в `ru.liqbez` каждого микросервиса и сканирует все его срезы.
+
+Контроллер принимает HTTP-запрос, сервис выполняет сценарий, репозиторий хранит или читает данные, `client` вызывает другой микросервис. `SagaService` обращается к `ReservationService` соседнего среза и к `PaymentClient`; результаты Saga хранятся в памяти через `SagaRepository`. Координатор `XaTwoPhaseCommitService` управляет фазами XA, а `XaAuditRepository` работает с двумя PostgreSQL. `PatientRepository` и `AppointmentRepository` пока содержат демо-данные в памяти.
 
 ## Запуск в Docker Compose
 

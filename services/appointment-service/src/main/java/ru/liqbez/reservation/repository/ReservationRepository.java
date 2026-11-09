@@ -1,8 +1,8 @@
-package ru.liqbez.appointment.repository;
+package ru.liqbez.reservation.repository;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import ru.liqbez.appointment.model.Reservation;
+import ru.liqbez.reservation.model.Reservation;
 
 @Repository
 public class ReservationRepository {

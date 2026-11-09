@@ -1,4 +1,4 @@
-package ru.liqbez.appointment;
+package ru.liqbez;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

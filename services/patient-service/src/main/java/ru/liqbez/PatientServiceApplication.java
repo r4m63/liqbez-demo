@@ -1,11 +1,11 @@
-package ru.liqbez.payment;
+package ru.liqbez;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class PaymentServiceApplication {
+public class PatientServiceApplication {
     public static void main(String[] args) {
-        SpringApplication.run(PaymentServiceApplication.class, args);
+        SpringApplication.run(PatientServiceApplication.class, args);
     }
 }
