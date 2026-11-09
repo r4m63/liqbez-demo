@@ -1,14 +1,22 @@
 services:
-  consul:
-    image: hashicorp/consul:1.21.3
-    command: agent -dev -ui -client=0.0.0.0
+  eureka-service:
+    build:
+      context: .
+      args:
+        SERVICE: eureka-service
     ports:
-      - "8500:8500"
-    healthcheck:
-      test: ["CMD", "consul", "members"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - "8761:8761"
+
+  # consul:
+  #   image: hashicorp/consul:1.21.3
+  #   command: agent -dev -ui -client=0.0.0.0
+  #   ports:
+  #     - "8500:8500"
+  #   healthcheck:
+  #     test: ["CMD", "consul", "members"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 10
 
   patient-service:
     build:
@@ -16,11 +24,12 @@ services:
       args:
         SERVICE: patient-service
     environment:
-      CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
+      EUREKA_URL: http://eureka-service:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # CONSUL_HOST: consul
+      # SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
     depends_on:
-      consul:
-        condition: service_healthy
+      - eureka-service
 
   appointment-service:
     build:
@@ -28,13 +37,13 @@ services:
       args:
         SERVICE: appointment-service
     environment:
-      CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
+      EUREKA_URL: http://eureka-service:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # CONSUL_HOST: consul
+      # SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
     depends_on:
-      consul:
-        condition: service_healthy
-      patient-service:
-        condition: service_started
+      - eureka-service
+      - patient-service
 
   api-gateway:
     build:
@@ -42,14 +51,13 @@ services:
       args:
         SERVICE: api-gateway
     environment:
-      CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
+      EUREKA_URL: http://eureka-service:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # CONSUL_HOST: consul
+      # SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
     ports:
       - "18080:8080"
     depends_on:
-      consul:
-        condition: service_healthy
-      patient-service:
-        condition: service_started
-      appointment-service:
-        condition: service_started
+      - eureka-service
+      - patient-service
+      - appointment-service

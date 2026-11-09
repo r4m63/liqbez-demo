@@ -4,24 +4,24 @@
 
 | Компонент | Адрес с хоста | Назначение |
 |---|---|---|
-| Consul | `http://localhost:8500/ui` | Активный реестр сервисов |
+| `services/eureka-service` | `http://localhost:8761` | Активный реестр Eureka |
 | `services/api-gateway` | `http://localhost:18080` | Внешний вход |
 | `services/patient-service` | Через gateway | Демо-данные пациента |
 | `services/appointment-service` | Через gateway | Запись на приём; вызывает `patient-service` по имени |
-| `services/eureka-service` | Не запускается в Compose | Сохранённый альтернативный реестр Eureka |
+| Consul | Не запускается в Compose | Сохранённая альтернативная конфигурация |
 
-Gateway использует `lb://patient-service` и `lb://appointment-service`. Сервисы регистрируются в Consul через Spring Cloud Consul. Consul проверяет их `/actuator/health`.
+Gateway использует `lb://patient-service` и `lb://appointment-service`. Сервисы регистрируются в Eureka через Spring Cloud Netflix. Настройки Consul сохранены в комментариях.
 
 ## Запуск в Docker Compose
 
 Нужны Docker Compose и JDK 25 для сборки JAR. Из корня проекта:
 
 ```bash
-./gradlew :services:patient-service:bootJar :services:appointment-service:bootJar :services:api-gateway:bootJar
+./gradlew bootJar
 docker compose up --build -d
 ```
 
-Открой [Consul UI](http://localhost:8500/ui) и дождись трёх здоровых сервисов. Проверь запросы:
+Открой [Eureka UI](http://localhost:8761) и дождись регистрации трёх приложений. Проверь запросы:
 
 ```bash
 curl http://localhost:18080/patients/1
@@ -36,8 +36,8 @@ curl http://localhost:18080/appointments/1
 docker compose up -d --scale patient-service=2
 ```
 
-В Consul появятся два экземпляра `patient-service`. Остановить стенд: `docker compose down`.
+В Eureka появятся два экземпляра `PATIENT-SERVICE`. Остановить стенд: `docker compose down`.
 
-## Альтернатива: Eureka
+## Альтернатива: Consul
 
-Модуль `services/eureka-service` сохранён. Для возврата к нему нужно заменить активную зависимость `spring-cloud-starter-consul-discovery` на закомментированную `spring-cloud-starter-netflix-eureka-client` в трёх приложениях, вернуть закомментированные блоки `eureka` в их `application.yaml` и запустить `./gradlew :services:eureka-service:bootRun`. Consul и Eureka не запускаются одновременно в этом демо.
+Конфигурация Consul сохранена в комментариях `compose.yaml`, Gradle-файлов и `application.yaml`. Для переключения нужно сделать её активной в трёх приложениях и Compose, а конфигурацию Eureka закомментировать. Оба реестра не запускаются одновременно в этом демо.
