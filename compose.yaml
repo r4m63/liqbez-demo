@@ -39,11 +39,75 @@ services:
     environment:
       EUREKA_URL: http://eureka-service:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      DEMO_DATA_DIR: /data
       # CONSUL_HOST: consul
       # SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
     depends_on:
       - eureka-service
       - patient-service
+    volumes:
+      - appointment-data:/data
+
+  payment-service:
+    build:
+      context: .
+      args:
+        SERVICE: payment-service
+    environment:
+      EUREKA_URL: http://eureka-service:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      DEMO_DATA_DIR: /data
+    depends_on:
+      - eureka-service
+    volumes:
+      - payment-data:/data
+
+  xa-patient-db:
+    image: postgres:17
+    command: ["postgres", "-c", "max_prepared_transactions=20"]
+    environment:
+      POSTGRES_DB: patientdb
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+    volumes:
+      - xa-patient-data:/var/lib/postgresql/data
+      - ./postgres/patient.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d patientdb"]
+      interval: 5s
+      retries: 10
+
+  xa-billing-db:
+    image: postgres:17
+    command: ["postgres", "-c", "max_prepared_transactions=20"]
+    environment:
+      POSTGRES_DB: billingdb
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+    volumes:
+      - xa-billing-data:/var/lib/postgresql/data
+      - ./postgres/billing.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d billingdb"]
+      interval: 5s
+      retries: 10
+
+  transaction-demo:
+    build:
+      context: .
+      args:
+        SERVICE: transaction-demo
+    environment:
+      EUREKA_URL: http://eureka-service:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      XA_PATIENT_URL: jdbc:postgresql://xa-patient-db:5432/patientdb
+      XA_BILLING_URL: jdbc:postgresql://xa-billing-db:5432/billingdb
+    depends_on:
+      - eureka-service
+      - appointment-service
+      - payment-service
+      - xa-patient-db
+      - xa-billing-db
 
   api-gateway:
     build:
@@ -61,3 +125,10 @@ services:
       - eureka-service
       - patient-service
       - appointment-service
+      - transaction-demo
+
+volumes:
+  appointment-data:
+  payment-data:
+  xa-patient-data:
+  xa-billing-data:

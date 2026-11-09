@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS reservation (
+    id VARCHAR(36) PRIMARY KEY,
+    status VARCHAR(20) NOT NULL
+);

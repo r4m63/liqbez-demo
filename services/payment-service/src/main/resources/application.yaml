@@ -1,0 +1,16 @@
+server:
+  port: 8083
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: jdbc:h2:file:${DEMO_DATA_DIR:./data}/payments;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+  sql:
+    init:
+      mode: always
+eureka:
+  client:
+    registry-fetch-interval-seconds: 5
+    serviceUrl:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}

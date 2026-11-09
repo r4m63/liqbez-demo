@@ -8,6 +8,8 @@
 | `services/api-gateway` | `http://localhost:18080` | Внешний вход |
 | `services/patient-service` | Через gateway | Демо-данные пациента |
 | `services/appointment-service` | Через gateway | Запись на приём; вызывает `patient-service` по имени |
+| `services/payment-service` | Через gateway | Локальная запись платежа для Saga |
+| `services/transaction-demo` | Через gateway | Координатор демонстраций XA и Saga |
 | Consul | Не запускается в Compose | Сохранённая альтернативная конфигурация |
 
 Gateway использует `lb://patient-service` и `lb://appointment-service`. Сервисы регистрируются в Eureka через Spring Cloud Netflix. Настройки Consul сохранены в комментариях.
@@ -37,6 +39,47 @@ docker compose up -d --scale patient-service=2
 ```
 
 В Eureka появятся два экземпляра `PATIENT-SERVICE`. Остановить стенд: `docker compose down`.
+
+## Демо 2PC / XA
+
+`transaction-demo` подключается к двум отдельным PostgreSQL через `PGXADataSource`. Для каждого запроса он создаёт два XA branch с общим transaction ID, записывает строки, вызывает `prepare` у обеих БД и затем `commit`. В Compose у PostgreSQL включён `max_prepared_transactions`.
+
+```bash
+XA_ID=$(uuidgen)
+curl -X POST "http://localhost:18080/transactions/xa/$XA_ID"
+curl "http://localhost:18080/transactions/xa/$XA_ID"
+```
+
+В ответе обе БД должны быть `true`. Для проверки отката используй новый ID:
+
+```bash
+XA_FAIL_ID=$(uuidgen)
+curl -i -X POST "http://localhost:18080/transactions/xa/$XA_FAIL_ID?failBeforePrepare=true"
+curl "http://localhost:18080/transactions/xa/$XA_FAIL_ID"
+```
+
+Первый запрос намеренно получает ошибку; второй показывает `false` для обеих БД. Это **настоящие XA prepare/commit/rollback**, но координатор написан как учебный пример: у него нет долговечного журнала решения и автоматического восстановления после падения между `prepare` и завершением `commit`. Для такой точки отказа этот код не подходит для продакшена.
+
+## Демо Saga
+
+`transaction-demo` сначала вызывает `appointment-service`, который локально сохраняет бронь, затем `payment-service`, который локально сохраняет платёж. При отказе платежа координатор вызывает отдельную операцию отмены брони. Это компенсация уже завершённого шага, а не общий rollback.
+
+```bash
+SAGA_ID=$(uuidgen)
+curl -X POST "http://localhost:18080/transactions/saga/$SAGA_ID"
+curl "http://localhost:18080/appointments/reservations/$SAGA_ID"
+curl "http://localhost:18080/payments/$SAGA_ID"
+```
+
+Для отказа платежа используй новый ID:
+
+```bash
+SAGA_FAIL_ID=$(uuidgen)
+curl -X POST "http://localhost:18080/transactions/saga/$SAGA_FAIL_ID?failPayment=true"
+curl "http://localhost:18080/appointments/reservations/$SAGA_FAIL_ID"
+```
+
+Ожидаются `COMPENSATED` и бронь со статусом `CANCELLED`. Бронь и платёж хранятся в отдельных файловых H2 внутри Docker volumes; состояние координатора Saga пока хранится в памяти. В демо нет восстановления незавершённых Saga и разрешения неоднозначного результата сетевого вызова после оплаты.
 
 ## Альтернатива: Consul
 

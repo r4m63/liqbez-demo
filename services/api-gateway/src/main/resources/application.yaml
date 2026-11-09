@@ -16,6 +16,14 @@ spring:
               uri: lb://appointment-service
               predicates:
                 - Path=/appointments/**
+            - id: payments
+              uri: lb://payment-service
+              predicates:
+                - Path=/payments/**
+            - id: transactions
+              uri: lb://transaction-demo
+              predicates:
+                - Path=/transactions/**
 #    consul:
 #      host: ${CONSUL_HOST:localhost}
 #      port: ${CONSUL_PORT:8500}
