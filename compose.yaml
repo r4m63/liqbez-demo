@@ -42,6 +42,11 @@ services:
       DEMO_DATA_DIR: /data
       XA_PATIENT_URL: jdbc:postgresql://xa-patient-db:5432/patientdb
       XA_BILLING_URL: jdbc:postgresql://xa-billing-db:5432/billingdb
+      IMPORT_STORAGE: ${IMPORT_STORAGE:-local}
+      MINIO_URL: ${MINIO_URL:-http://host.docker.internal:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-liqbez-demo}
       # CONSUL_HOST: consul
       # SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS: "true"
     depends_on:

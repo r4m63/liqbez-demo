@@ -7,4 +7,5 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     runtimeOnly("com.h2database:h2")
     implementation("org.postgresql:postgresql")
+    implementation("io.minio:minio:9.0.4")
 }

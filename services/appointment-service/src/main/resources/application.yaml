@@ -21,6 +21,14 @@ eureka:
     serviceUrl:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
 demo:
+  import:
+    storage: ${IMPORT_STORAGE:local}
+    local-dir: ${IMPORT_LOCAL_DIR:${DEMO_DATA_DIR:./data}/import-objects}
+    minio:
+      url: ${MINIO_URL:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+      bucket: ${MINIO_BUCKET:liqbez-demo}
   xa:
     patient-url: ${XA_PATIENT_URL:jdbc:postgresql://localhost:5433/patientdb}
     billing-url: ${XA_BILLING_URL:jdbc:postgresql://localhost:5434/billingdb}

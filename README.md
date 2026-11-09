@@ -7,7 +7,7 @@
 | `services/eureka-service` | `http://localhost:8761` | Активный реестр Eureka |
 | `services/api-gateway` | `http://localhost:18080` | Внешний вход |
 | `services/patient-service` | Через gateway | Демо-данные пациента |
-| `services/appointment-service` | Через gateway | Запись на приём; вызывает `patient-service` по имени; содержит демо XA и Saga |
+| `services/appointment-service` | Через gateway | Запись на приём; вызывает `patient-service` по имени; содержит демо XA, Saga и синхронизации транзакции с файловым хранилищем |
 | `services/payment-service` | Через gateway | Локальная запись платежа для Saga |
 | Consul | Не запускается в Compose | Сохранённая альтернативная конфигурация |
 
@@ -15,12 +15,13 @@ Gateway использует `lb://patient-service` и `lb://appointment-service
 
 ## Вертикальные срезы и слои
 
-Код сгруппирован сначала по сценарию, затем по слою. В `appointment-service` четыре среза:
+Код сгруппирован сначала по сценарию, затем по слою. В `appointment-service` пять срезов:
 
 ```text
 ru.liqbez/
 ├── AppointmentServiceApplication.java
 ├── appointment/   controller, service, repository, model, client
+├── importsync/    controller, service, repository, model, storage
 ├── reservation/   controller, service, repository, model
 ├── saga/          controller, service, repository, model, client
 └── xa/            controller, service, repository, model
@@ -96,6 +97,32 @@ curl "http://localhost:18080/appointments/reservations/$SAGA_FAIL_ID"
 ```
 
 Ожидаются `COMPENSATED` и бронь со статусом `CANCELLED`. Бронь и платёж хранятся в отдельных файловых H2 внутри Docker volumes; состояние координатора Saga пока хранится в памяти. В демо нет восстановления незавершённых Saga и разрешения неоднозначного результата сетевого вызова после оплаты.
+
+## Демо транзакционной синхронизации: БД + файл
+
+Срез `importsync` повторяет разделение ответственности из [VehicleImportService](https://github.com/r4m63/is-itmo/blob/main/src/main/java/ru/itmo/isitmolab/service/VehicleImportService.java) и [VehicleImportTxService](https://github.com/r4m63/is-itmo/blob/main/src/main/java/ru/itmo/isitmolab/service/VehicleImportTxService.java), но использует Spring. `PetVisitImportService` создаёт запись `STARTED` и проверяет список питомцев. `PetVisitImportTxService` в локальной транзакции сохраняет строки в H2, через `TransactionSynchronization.beforeCommit` загружает текстовый файл в хранилище, а в `afterCompletion` записывает итог операции. При откате после загрузки он удаляет файл. Записи о статусе выполняются отдельными транзакциями `REQUIRES_NEW`.
+
+По умолчанию хранилище — каталог `/data/import-objects` внутри Docker volume `appointment-data`. Для использования доступного извне MinIO можно запустить Compose с `IMPORT_STORAGE=minio` и задать `MINIO_URL`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`. В `appointment-service` есть отдельный `MinioObjectStorage`; сервер MinIO в этот Compose не включён.
+
+```bash
+IMPORT_ID=$(uuidgen)
+curl -X POST "http://localhost:18080/transactions/synchronization/imports/$IMPORT_ID" \
+  -H 'Content-Type: application/json' \
+  -d '{"fileName":"visits.txt","petNames":["Барсик","Мурка"]}'
+curl "http://localhost:18080/transactions/synchronization/imports/$IMPORT_ID"
+```
+
+Ожидаются `COMPLETED`, два имени в `petNames` и `objectPresent: true`. Для проверки отката после успешной загрузки:
+
+```bash
+IMPORT_FAIL_ID=$(uuidgen)
+curl -i -X POST "http://localhost:18080/transactions/synchronization/imports/$IMPORT_FAIL_ID?failAfterUpload=true" \
+  -H 'Content-Type: application/json' \
+  -d '{"fileName":"visits.txt","petNames":["Шарик"]}'
+curl "http://localhost:18080/transactions/synchronization/imports/$IMPORT_FAIL_ID"
+```
+
+Первый запрос намеренно возвращает ошибку. Второй показывает `FAILED`, пустой список и `objectPresent: false`. Это **не XA/2PC между H2 и файловым хранилищем**: файл загружается до commit БД, а при откате удаляется отдельным действием. Падение процесса между этими шагами может оставить лишний файл; при неопределённом исходе транзакции пример оставляет статус `UNKNOWN` для разбора, а не удаляет файл вслепую.
 
 ## Альтернатива: Consul
 
